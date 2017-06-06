@@ -56,19 +56,34 @@
     "mgmtSubnetRef": {
       "type": "string"
     },
-    "intIpAddress1": {
+    "vmssIpAddress1": {
       "type": "string"
     },
-    "intIpAddress2": {
+    "vmssIpAddress2": {
       "type": "string"
     },
-    "intSubnetRef": {
+    "vmssSubnetRef": {
       "type": "string"
     },
-    "ilbIpAddress": {
+    "azpmgmtIpAddress1": {
       "type": "string"
     },
-    "ilbSubnetRef": {
+    "azpmgmtIpAddress2": {
+      "type": "string"
+    },
+    "azpmgmtSubnetRef": {
+      "type": "string"
+    },
+    "dmzIpAddress1": {
+      "type": "string"
+    },
+    "dmzIpAddress2": {
+      "type": "string"
+    },
+    "dmzSubnetRef": {
+      "type": "string"
+    },
+    "publicIPID": {
       "type": "string"
     },
     "nicNamePrefix": {
@@ -122,11 +137,9 @@
           {
             "name": "loadBalancerFrontEnd-data",
             "properties": {
-              "subnet": {
-                "id": "[parameters('ilbSubnetRef')]"
-              },
-              "privateIPAddress": "[parameters('ilbIPAddress')]",
-              "privateIPAllocationMethod": "Static"
+              "publicIPAddress": {
+                "id": "[parameters('publicIPID')]"
+              }
             }
           }
         ],
@@ -155,7 +168,7 @@
             }
           },
           {
-            "Name": "data-http-443",
+            "Name": "data1-http-443",
             "properties": {
               "frontendIPConfiguration": {
                 "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('loadBalancerName'),'-data')), '/frontendIpConfigurations/loadBalancerFrontEnd-data')]"
@@ -164,11 +177,11 @@
                 "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('loadBalancerName'),'-data')), '/backendAddressPools/loadBalancerBackEnd-data')]"
               },
               "probe": {
-                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('loadBalancerName'),'-data')), '/probes/tcp-8443')]"
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('loadBalancerName'),'-data')), '/probes/tcp-443')]"
               },
               "protocol": "Tcp",
               "frontendPort": 443,
-              "backendPort": 8443,
+              "backendPort": 443,
               "idleTimeoutInMinutes": 15
             }
           }
@@ -186,11 +199,11 @@
           {
             "properties": {
               "protocol": "Tcp",
-              "port": 8443,
+              "port": 443,
               "intervalInSeconds": 15,
               "numberOfProbes": 2
             },
-            "name": "tcp-8443"
+            "name": "tcp-443"
           }
         ]
       }
@@ -223,7 +236,57 @@
     {
       "apiVersion": "[parameters('apiVersionNetwork')]",
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[concat(parameters('nicNamePrefix'),'-int1')]",
+      "name": "[concat(parameters('nicNamePrefix'),'-vmss1')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "displayName": "NetworkInterface"
+      },
+      "dependsOn": [
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[parameters('vmssIpAddress1')]",
+              "subnet": {
+                "id": "[parameters('vmssSubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[parameters('apiVersionNetwork')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('nicNamePrefix'),'-azpmgmt1')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "displayName": "NetworkInterface"
+      },
+      "dependsOn": [
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[parameters('azpmgmtIpAddress1')]",
+              "subnet": {
+                "id": "[parameters('azpmgmtSubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[parameters('apiVersionNetwork')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('nicNamePrefix'),'-dmz1')]",
       "location": "[parameters('location')]",
       "tags": {
         "displayName": "NetworkInterface"
@@ -237,9 +300,9 @@
             "name": "ipconfig1",
             "properties": {
               "privateIPAllocationMethod": "Static",
-              "privateIPAddress": "[parameters('intIpAddress1')]",
+              "privateIPAddress": "[parameters('dmzIpAddress1')]",
               "subnet": {
-                "id": "[parameters('intSubnetRef')]"
+                "id": "[parameters('dmzSubnetRef')]"
               },
               "loadBalancerBackendAddressPools": [
                   {
@@ -261,7 +324,9 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', parameters('nicNamePrefix'),'-mgmt1')]",
-        "[concat('Microsoft.Network/networkInterfaces/', parameters('nicNamePrefix'),'-int1')]"
+        "[concat('Microsoft.Network/networkInterfaces/', parameters('nicNamePrefix'),'-vmss1')]",
+        "[concat('Microsoft.Network/networkInterfaces/', parameters('nicNamePrefix'),'-azpmgmt1')]",
+        "[concat('Microsoft.Network/networkInterfaces/', parameters('nicNamePrefix'),'-dmz1')]"
       ],
       "plan": {
         "name": "f5-bigip-virtual-edition-best-byol",
@@ -285,7 +350,7 @@
             "publisher": "f5-networks",
             "offer": "f5-big-ip",
             "sku": "f5-bigip-virtual-edition-best-byol",
-            "version": "12.1.21"
+            "version": "latest"
           },
           "osDisk": {
             "name": "[concat(parameters('f5NamePrefix'),'osdisk1')]",
@@ -305,7 +370,19 @@
               }
             },
             {
-              "id": "[concat(resourceId('Microsoft.Network/networkInterfaces',parameters('nicNamePrefix')),'-int1')]",
+              "id": "[concat(resourceId('Microsoft.Network/networkInterfaces',parameters('nicNamePrefix')),'-vmss1')]",
+              "properties": {
+                "primary": false
+              }
+            },
+            {
+              "id": "[concat(resourceId('Microsoft.Network/networkInterfaces',parameters('nicNamePrefix')),'-azpmgmt1')]",
+              "properties": {
+                "primary": false
+              }
+            },
+            {
+              "id": "[concat(resourceId('Microsoft.Network/networkInterfaces',parameters('nicNamePrefix')),'-dmz1')]",
               "properties": {
                 "primary": false
               }
@@ -340,10 +417,10 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('mkdir /config/cloud && cp f5-cloud-libs.tar.gz* /config/cloud; /usr/bin/install -b -m 755 /dev/null /config/verifyHash; /usr/bin/install -b -m 755 /dev/null /config/installCloudLibs.sh; /usr/bin/install -b -m 400 /dev/null /config/cloud/passwd; IFS=', variables('singleQuote'), '%', variables('singleQuote'), '; echo -e ', variables('verifyHash'), ' >> /config/verifyHash; echo -e ', variables('installCloudLibs'), ' >> /config/installCloudLibs.sh; echo ', variables('singleQuote'), parameters('adminPassword'), variables('singleQuote'), ' >> /config/cloud/passwd; unset IFS; bash /config/installCloudLibs.sh; /usr/bin/f5-rest-node /config/cloud/f5-cloud-libs/scripts/onboard.js --output /var/log/onboard.log --log-level debug --host ', parameters('mgmtIpAddress1'), ' --ssl-port ', '443', ' -u admin --password-url file:///config/cloud/passwd --hostname ', concat(parameters('f5namePrefix'), '-1','.', resourceGroup().location, '.cloudapp.azure.com'), ' --license ',parameters('licenseKey1'), ' --ntp pool.ntp.org --db tmm.maxremoteloglength:2048 --module ltm:nominal --module afm:none; f5-rest-node /config/cloud/f5-cloud-libs/scripts/network.js --output /var/log/network.log --host ', parameters('mgmtIpAddress1'), ' --port ', '443', ' -u admin --password-url file:///config/cloud/passwd --multi-nic --vlan mgmt_vlan,1.0 --vlan internal_vlan,1.1 --self-ip mgmt_self,', parameters('mgmtIPAddress1'), ',mgmt_vlan --self-ip internal_self,', parameters('intIPAddress1'), ',internal_vlan --log-level debug --force-reboot; /usr/bin/f5-rest-node /config/cloud/f5-cloud-libs/scripts/cluster.js --output /var/log/clusterGroup.log --log-level debug --host ', parameters('mgmtIPAddress1'), ' -u admin --password-url file:///config/cloud/mypass --create-group --device-group Sync --sync-type sync-failover --device ', concat(parameters('f5NamePrefix'),'-1', '.azure.com'), ' --config-sync-ip ',parameters('intIPAddress1'), ' --auto-sync --save-on-auto-sync; rm -f /config/cloud/passwd')]"
+          "commandToExecute": "[concat('mkdir /config/cloud && cp f5-cloud-libs.tar.gz* /config/cloud; /usr/bin/install -b -m 755 /dev/null /config/verifyHash; /usr/bin/install -b -m 755 /dev/null /config/installCloudLibs.sh; /usr/bin/install -b -m 400 /dev/null /config/cloud/passwd; IFS=', variables('singleQuote'), '%', variables('singleQuote'), '; echo -e ', variables('verifyHash'), ' >> /config/verifyHash; echo -e ', variables('installCloudLibs'), ' >> /config/installCloudLibs.sh; echo ', variables('singleQuote'), parameters('adminPassword'), variables('singleQuote'), ' >> /config/cloud/passwd; unset IFS; bash /config/installCloudLibs.sh; /usr/bin/f5-rest-node /config/cloud/f5-cloud-libs/scripts/onboard.js --output /var/log/onboard.log --log-level debug --host ', parameters('mgmtIpAddress1'), ' --ssl-port ', '8443', ' -u admin --password-url file:///config/cloud/passwd --hostname ', concat(parameters('f5namePrefix'), '-1','.', resourceGroup().location, '.cloudapp.azure.com'), ' --license ',parameters('licenseKey1'), ' --ntp pool.ntp.org --db tmm.maxremoteloglength:2048 --module ltm:nominal --module afm:none; f5-rest-node /config/cloud/f5-cloud-libs/scripts/network.js --output /var/log/network.log --host ', parameters('mgmtIpAddress1'), ' --port ', '8443', ' -u admin --password-url file:///config/cloud/passwd --multi-nic --vlan mgmt_vlan,1.0 --vlan vmss_vlan,1.1 --vlan azpmgmt_vlan,1.2 --vlan dmz_vlan,1.3 --self-ip mgmt_self,', parameters('mgmtIPAddress1'), ',mgmt_vlan --self-ip vmss_self,', parameters('vmssIPAddress1'), ',vmss_vlan --self-ip azpmgmt_self,', parameters('azpmgmtIPAddress1'), ',azpmgmt_vlan --self-ip dmz_self,', parameters('dmzIPAddress1'), ',dmz_vlan --log-level debug --force-reboot; /usr/bin/f5-rest-node /config/cloud/f5-cloud-libs/scripts/cluster.js --output /var/log/clusterGroup.log --log-level debug --host ', parameters('mgmtIPAddress1'), ' --port ', '8443', ' -u admin --password-url file:///config/cloud/mypass --create-group --device-group Sync --sync-type sync-failover --device ', concat(parameters('f5NamePrefix'),'-1', '.azure.com'), ' --config-sync-ip ',parameters('azpmgmtIPAddress1'), ' --auto-sync --save-on-auto-sync; rm -f /config/cloud/passwd')]"
         }
       }
     }
-  ],
+      ],
       "outputs": { }
     }
