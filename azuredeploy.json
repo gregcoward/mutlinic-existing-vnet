@@ -98,9 +98,9 @@
     },
     "mgmtSubnetName": {
       "type": "string",
-      "defaultValue": "data",
+      "defaultValue": "",
       "metadata": {
-        "description": "Specify the virtual subnet name wher the BIG-IP will reside."
+        "description": "Specify the virtual subnet name where the BIG-IP mamangement interface will reside."
       }
     },
     "mgmtIPAddress1": {
