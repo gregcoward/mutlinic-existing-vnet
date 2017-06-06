@@ -89,13 +89,6 @@
         "description": "Specify the virtual network name."
       }
     },
-    "vnetAddressPrefix": {
-      "type": "string",
-      "defaultValue": "10.10.0.0/16",
-      "metadata": {
-        "description": "Specify the virtual network address space."
-      }
-    },
     "mgmtSubnetName": {
       "type": "string",
       "defaultValue": "",
@@ -394,9 +387,6 @@
           },
           "vnetName": {
             "value": "[parameters('vnetName')]"
-          },
-          "vnetAddressPrefix": {
-            "value": "[parameters('vnetAddressPrefix')]"
           },
           "mgmtSubnetName": {
             "value": "[parameters('mgmtSubnetName')]"

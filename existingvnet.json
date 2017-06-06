@@ -20,12 +20,6 @@
         "description": "Name of the Virtual Network"
       }
     },
-    "vnetAddressPrefix": {
-      "type": "string",
-      "metadata": {
-        "description": "Address Prefix for Virtual Network"
-      }
-    },
     "mgmtSubnetName": {
       "type": "string",
       "metadata": {
